@@ -177,6 +177,24 @@ class DeviceCoordinator:
         )
         await self.coordinator.async_request_refresh()
 
+    async def set_pbr_policy(self, policy_id: str, enable: bool):
+        await self._ubus.api_call(
+            f"uci",
+            "set",
+            dict(config="pbr", section=policy_id, values=dict(enabled=enable))
+        )
+        await self._ubus.api_call(
+            f"uci",
+            "commit",
+            dict(config="pbr")
+        )
+        await self._ubus.api_call(
+            f"uci",
+            "reload_config",
+            dict()
+        )
+        await self.coordinator.async_request_refresh()
+
     async def do_reboot(self):
         _LOGGER.debug(f"Rebooting device: {self._id}")
         await self._ubus.api_call(
@@ -313,6 +331,26 @@ class DeviceCoordinator:
             }
         return result
 
+    async def discover_pbr_policy(self):
+        if not self.is_api_supported("uci"):
+            return dict()
+        result = dict()
+        response = await self._ubus.api_call(
+            "uci",
+            "get",
+            dict(config="pbr")
+        )
+        for key, policy in response.get("values", {}).items():
+            if policy.get(".type", "") != "policy":
+                continue
+            result[key] = {
+                "name": policy.get("name", "NONAME: " + key),
+                "dest_addr": policy.get("dest_addr", ""),
+                "interface": policy.get("interface", ""),
+                "enabled": policy.get("enabled", "1") == "1"
+            }
+        return result
+
     async def load_ubus(self):
         return await self._ubus.api_list()
 
@@ -333,6 +371,7 @@ class DeviceCoordinator:
                 result['mesh'] = await self.update_mesh(wireless_config['mesh'])
                 result["mwan3"] = await self.discover_mwan3()
                 result["wan"] = await self.update_wan_info()
+                result["pbr_policy"] = await self.discover_pbr_policy()
                 _LOGGER.debug(f"Full update [{self._id}]: {result}")
                 return result
             except PermissionError as err:

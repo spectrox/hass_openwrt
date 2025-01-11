@@ -24,6 +24,9 @@ async def async_setup_entry(
         if "wps" in info:
             sensor = WirelessWpsSwitch(device, device_id, net_id)
             entities.append(sensor)
+    for policy_id, info in device.coordinator.data['pbr_policy'].items():
+        switch = PbrPolicySwitch(device, device_id, policy_id)
+        entities.append(switch)
     async_add_entities(entities)
     return True
 
@@ -56,6 +59,39 @@ class WirelessWpsSwitch(OpenWrtEntity, SwitchEntity):
     @property
     def icon(self):
         return "mdi:security"
+
+    @property
+    def entity_category(self):
+        return EntityCategory.CONFIG
+
+class PbrPolicySwitch(OpenWrtEntity, SwitchEntity):
+    def __init__(self, device, device_id, policy_id: str):
+        super().__init__(device, device_id)
+        self._policy_id = policy_id
+
+    @property
+    def unique_id(self):
+        return "%s.pbr_policy.%s" % (super().unique_id, self._policy_id)
+
+    @property
+    def name(self):
+        return "%s PBR Policy: %s" % (super().name, self.data["pbr_policy"][self._policy_id]["name"])
+
+    @property
+    def is_on(self):
+        return self.data["pbr_policy"][self._policy_id]["enabled"]
+
+    async def async_turn_on(self, **kwargs):
+        await self._device.set_pbr_policy(self._policy_id, True)
+        self.data["pbr_policy"][self._policy_id]["enabled"] = True
+
+    async def async_turn_off(self, **kwargs):
+        await self._device.set_pbr_policy(self._policy_id, False)
+        self.data["pbr_policy"][self._policy_id]["enabled"] = False
+
+    @property
+    def icon(self):
+        return "mdi:call-split"
 
     @property
     def entity_category(self):
