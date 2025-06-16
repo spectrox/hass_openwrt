@@ -332,7 +332,7 @@ class DeviceCoordinator:
         return result
 
     async def discover_pbr_policy(self):
-        if not self.is_api_supported("uci"):
+        if not self.is_api_supported("luci.pbr"):
             return dict()
         result = dict()
         response = await self._ubus.api_call(
