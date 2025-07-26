@@ -92,7 +92,3 @@ class PbrPolicySwitch(OpenWrtEntity, SwitchEntity):
     @property
     def icon(self):
         return "mdi:call-split"
-
-    @property
-    def entity_category(self):
-        return EntityCategory.CONFIG
