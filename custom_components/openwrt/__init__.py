@@ -4,6 +4,7 @@ from .constants import DOMAIN, PLATFORMS
 from homeassistant.core import HomeAssistant, SupportsResponse
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers import service
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
@@ -58,7 +59,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         ids = await service.async_extract_config_entry_ids(hass, call)
         response = {}
         for entry_id in ids:
-            if coordinator := hass.data[DOMAIN]["devices"].get(entry_id): 
+            if coordinator := hass.data[DOMAIN]["devices"].get(entry_id):
                 if coordinator.is_api_supported("file"):
                     args = parts[1:]
                     if "arguments" in call.data:
@@ -110,18 +111,13 @@ class OpenWrtEntity(CoordinatorEntity):
         super().__init__(device.coordinator)
         self._device_id = device_id
         self._device = device
-
-    @property
-    def device_info(self):
-        return {
-            "identifiers": {
-                ("id", self._device_id)
-            },
-            "name": f"OpenWrt [{self._device_id}]",
-            "model": self.data["info"]["model"],
-            "manufacturer": self.data["info"]["manufacturer"],
-            "sw_version": self.data["info"]["sw_version"],
-        }
+        self._attr_device_info = DeviceInfo(
+            identifiers={("openwrt", self._device_id)},
+            name=f"OpenWRT [{self._device_id}]",
+            model=self.data["info"]["model"],
+            manufacturer=self.data["info"]["manufacturer"],
+            sw_version=self.data["info"]["sw_version"],
+        )
 
     @property
     def name(self):
